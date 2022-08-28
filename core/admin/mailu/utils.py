@@ -47,16 +47,15 @@ def handle_needs_login():
 
 # DNS stub configured to do DNSSEC enabled queries
 resolver = dns.resolver.Resolver()
-resolver.use_edns(0, 0, 1232)
+resolver.use_edns(0, dns.flags.DO, 1232)
 resolver.flags = dns.flags.AD | dns.flags.RD
 
 def has_dane_record(domain, timeout=10):
     try:
-        result = resolver.query(f'_25._tcp.{domain}', dns.rdatatype.TLSA,dns.rdataclass.IN, lifetime=timeout)
+        result = resolver.resolve(f'_25._tcp.{domain}', dns.rdatatype.TLSA,dns.rdataclass.IN, lifetime=timeout)
         if result.response.flags & dns.flags.AD:
             for record in result:
                 if isinstance(record, dns.rdtypes.ANY.TLSA.TLSA):
-                    record.validate()
                     if record.usage in [2,3] and record.selector in [0,1] and record.mtype in [0,1,2]:
                         return True
     except dns.resolver.NoNameservers:
