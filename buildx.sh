@@ -1,7 +1,7 @@
 #!/bin/bash
 
 DOCKER_ORG=scjtqs
-PINNED_MAILU_VERSION=1.9
+PINNED_MAILU_VERSION=1.9.0
 MAILU_VERSION=1.9
 
 docker buildx create --use --name mydevbuilder
