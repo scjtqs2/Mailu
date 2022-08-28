@@ -34,8 +34,8 @@ RUN set -eu \
 RUN mkdir -p /app
 WORKDIR /app
 
-#COPY requirements-prod.txt requirements.txt
-COPY requirements.txt requirements.txt
+COPY requirements-prod.txt requirements.txt
+#COPY requirements.txt requirements.txt
 RUN set -eu \
  && apk add --no-cache libressl curl postgresql-libs mariadb-connector-c \
  && pip install --no-cache-dir --extra-index-url=https://www.piwheels.org/simple -r requirements.txt --only-binary=:all: --no-binary=Flask-bootstrap,PyYAML,SQLAlchemy \
