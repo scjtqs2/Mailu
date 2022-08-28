@@ -18,7 +18,8 @@ def nginx_authentication():
         response.headers['Auth-Error-Code'] = '502 5.5.1'
         utils.limiter.rate_limit_ip(client_ip)
         return response
-    if utils.limiter.should_rate_limit_ip(client_ip):
+    is_from_webmail = headers['Auth-Port'] in ['10143', '10025']
+    if not is_from_webmail and utils.limiter.should_rate_limit_ip(client_ip):
         status, code = nginx.get_status(flask.request.headers['Auth-Protocol'], 'ratelimit')
         response = flask.Response()
         response.headers['Auth-Status'] = status
@@ -47,7 +48,7 @@ def nginx_authentication():
         utils.limiter.exempt_ip_from_ratelimits(client_ip)
     elif is_valid_user:
         utils.limiter.rate_limit_user(username, client_ip)
-    else:
+    elif not is_from_webmail:
         utils.limiter.rate_limit_ip(client_ip)
     return response
 
