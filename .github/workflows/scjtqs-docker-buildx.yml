@@ -1,0 +1,102 @@
+name: scjtqs-docker-buildx
+on:
+  push:
+    branches:
+      - staging
+      - testing
+      - '1.8'
+      - '1.9'
+      - master
+      # test branches, e.g. test-debian
+      - test-*
+
+concurrency: ci-${{ github.ref }}
+
+###############################################
+# REQUIRED secrets
+# DOCKER_UN: ${{ secrets.Docker_Login }}
+#    Username of docker login for pushing the images to repo $DOCKER_ORG and $DOCKER_ORG_TESTS
+# DOCKER_PW: ${{ secrets.Docker_Password }}
+#    Password of docker login for pushing the images to repo $DOCKER_ORG and $DOCKER_ORG_TESTS
+# DOCKER_ORG: ${{ secrets.DOCKER_ORG }}
+#    The docker repository where the images are pushed to.
+# DOCKER_ORG_TESTS: ${{ secrets.DOCKER_ORG_TESTS }}
+#    The docker repository for test images. Only used for the branch TESTING (BORS try).
+# Add the above secrets to your github repo to determine where the images will be pushed.
+################################################
+# Code block that is used as one liner.
+##!/bin/bash
+#version=$( git tag --sort=version:refname --list "{{ env.MAILU_VERSION }}.*" | tail -1  )
+#root_version=${version%.*}
+#patch_version=${version##*.}
+#if [ "$patch_version" == "" ]
+#then
+#  pinned_version={{ env.MAILU_VERSION }}.0
+#else
+#  pinned_version=$root_version.$(expr $patch_version + 1)
+#fi
+#echo "PINNED_MAILU_VERSION=$pinned_version" >> $GITHUB_ENV
+
+jobs:
+  build:
+    name: Build images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          # fetch-depth 0 is required to also retrieve all tags.
+          fetch-depth: 0
+      - name: Extract branch name
+        shell: bash
+        run: |
+          echo "BRANCH=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
+
+      - name: Derive MAILU_VERSION for other branches than testing
+        if: ${{ env.BRANCH != 'testing' }}
+        shell: bash
+        env:
+          DOCKER_ORG: ${{ secrets.DOCKER_ORG }}
+        run: |
+          echo "MAILU_VERSION=${{ env.BRANCH }}" >> $GITHUB_ENV
+          echo "DOCKER_ORG=scjtqs" >> $GITHUB_ENV
+      - name: Derive PINNED_MAILU_VERSION for normal release x.y
+        if: ${{ env.BRANCH != 'testing' && env.BRANCH != 'staging' && env.BRANCH != 'master' }}
+        shell: bash
+        run: |
+          version=$( git tag --sort=version:refname --list "${{ env.MAILU_VERSION }}.*" | tail -1  );root_version=${version%.*};patch_version=${version##*.};if [ "$patch_version" == "" ]; then pinned_version=${{ env.MAILU_VERSION }}.0; else pinned_version=$root_version.$(expr $patch_version + 1); fi;echo "PINNED_MAILU_VERSION=$pinned_version" >> $GITHUB_ENV
+      - name: Derive PINNED_MAILU_VERSION for staging
+        if: ${{ env.BRANCH == 'staging' }}
+        shell: bash
+        run: |
+          echo "PINNED_MAILU_VERSION=staging" >> $GITHUB_ENV      
+      - name: Derive PINNED_MAILU_VERSION for master
+        if: ${{ env.BRANCH == 'master' }}
+        shell: bash
+        env:
+          GITHUB_SHA: ${{ env.GITHUB_SHA }}
+        run: |
+          echo "PINNED_MAILU_VERSION=$GITHUB_SHA" >> $GITHUB_ENV
+      - name: Create folder for storing images
+        run: |
+          sudo mkdir -p /images
+          sudo chmod 777 /images
+      - name: Configure images folder for caching
+        uses: actions/cache@v2
+        with:
+          path: /images
+          key: ${{ env.BRANCH }}-${{ github.run_id }}-${{ github.run_number }}
+      - name: Check docker-compose version
+        run: docker-compose -v
+      - name: Login docker
+        env:
+          DOCKER_UN: ${{ secrets.Docker_Login }}
+          DOCKER_PW: ${{ secrets.Docker_Password }}
+          DOCKER_ORG: ${{ env.DOCKER_ORG }}
+        run: echo "$DOCKER_PW" | docker login --username $DOCKER_UN --password-stdin
+      - name: Build all docker images
+#        env:
+#          MAILU_VERSION: ${{ env.MAILU_VERSION }}
+#          PINNED_MAILU_VERSION: ${{ env.PINNED_MAILU_VERSION }}
+#          DOCKER_ORG: ${{ env.DOCKER_ORG }}
+        run: |
+          bash ./buildx.sh
