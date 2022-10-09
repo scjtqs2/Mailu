@@ -106,26 +106,29 @@ The development environment is quite similar to the production one.
 Building images
 ```````````````
 
-We supply a separate ``test/build.yml`` file for convenience.
+We supply a separate ``test/build.hcl`` file for convenience.
 After cloning the git repository to your workstation, you can build the images:
 
 .. code-block:: bash
 
   cd Mailu
-  docker-compose -f tests/build.yml build
+  docker buildx bake -f tests/build.hcl --load
 
-The ``build.yml`` file has two variables:
+The ``build.hcl`` file has three variables:
 
 #. ``$DOCKER_ORG``: First part of the image tag. Defaults to *mailu* and needs to be changed
    only  when pushing to your own Docker hub account.
-#. ``$VERSION``: Last part of the image tag. Defaults to *local* to differentiate from pulled
+#. ``$MAILU_VERSION``: Last part of the image tag. Defaults to *local* to differentiate from pulled
    images.
+#. ``$MAILU_PINNED_VERSION``: Last part of the image tag for x.y.z images. Defaults to *local* to differentiate from pulled
+   images.
+
 
 To re-build only specific containers at a later time.
 
 .. code-block:: bash
 
-  docker-compose -f tests/build.yml build admin webdav
+  docker buildx bake -f tests/build.hcl admin webdav
 
 If you have to push the images to Docker Hub for testing in Docker Swarm or a remote
 host, you have to define ``DOCKER_ORG`` (usually your Docker user-name) and login to
@@ -137,15 +140,15 @@ the hub.
   Username: Foo
   Password: Bar
   export DOCKER_ORG="Foo"
-  export VERSION="feat-extra-app"
-  docker-compose -f tests/build.yml build
-  docker-compose -f tests/build.yml push
+  export MAILU_VERSION="feat-extra-app"
+  export MAILU_PINNED_VERSION="feat-extra-app"
+  docker buildx bake -f tests/build.hcl --push
 
 Running containers
 ``````````````````
 
 To run the newly created images: ``cd`` to your project directory. Edit ``.env`` to set
-``VERSION`` to the same value as used during the build, which defaults to ``local``.
+``VERSION`` to the same value as used during the build (for MAILU_VERSION), which defaults to ``local``.
 After that you can run:
 
 .. code-block:: bash
@@ -173,7 +176,7 @@ Finally, if you need to install packages inside the containers for debugging:
 Reviewing
 ---------
 
-Members of the **Mailu/contributors** team leave reviews to open PR's.
+Members of the **Mailu/contributors** team leave reviews on open PR's.
 In the case of a PR from a fellow team member, a single review is enough
 to initiate merging. In all other cases, two approving reviews are required.
 There is also a possibility to set the ``review/need2`` to require a second review.
@@ -242,8 +245,8 @@ feel free to write a comment with ``bors retry``.
 
   The command "git checkout -qf <hash>" failed and exited with 128 during .
 
-Please wait a few minutes to do so, not to interfere with other builds.
-Also, don't abuse this command if anything else went wrong,
+Please wait a few minutes to do so, so as not to interfere with other builds.
+Also, don't abuse this command if anything else goes wrong,
 the author needs to try to fix it instead!
 
 Reviewing by git
@@ -277,7 +280,7 @@ Merge conflicts
 Before proceeding, check the PR page in the bottom. It should not indicate a merge conflict.
 If there are merge conflicts, you have 2 options:
 
-#. Do a review "request changes" and ask the author to resolve the merge conflict. 
+#. Do a review "request changes" and ask the author to resolve the merge conflict.
 #. Solve the merge conflict yourself on Github, using the web editor.
 
 If it can't be done in the web editor, go for option 1. Unless you want to go through the trouble of
@@ -286,7 +289,7 @@ importing the branch into your fork, do the merge and send a PR to the repositor
 Merge the PR locally
 ```````````````````````
 
-When someone sends a PR, you need merge his PR into master locally. This example will put you in a
+When someone sends a PR, you need merge their PR into master locally. This example will put you in a
 "detached head" state and do the merge in that state. Any commits done in this state will be lost
 forever when you checkout a "normal" branch. This is exactly what we want, as we do not want to mess
 with our repositories. This is just a test run.

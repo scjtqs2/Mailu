@@ -5,6 +5,7 @@ from flask import current_app as app
 import flask
 import idna
 import re
+import sqlalchemy.exc
 import srslib
 
 @internal.route("/postfix/dane/<domain_name>")

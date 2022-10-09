@@ -1,30 +1,23 @@
-# NOTE: only add qemu-arm-static if building for arm
-ARG ARCH=""
-ARG QEMU=other
-FROM ${ARCH}php:8.0-apache as build_arm
-ONBUILD COPY --from=balenalib/rpi-alpine:3.14 /usr/bin/qemu-arm-static /usr/bin/qemu-arm-static
-FROM ${ARCH}php:8.0-apache as build_other
+FROM php:8.0-apache
 
-
-FROM build_${QEMU}
 ARG VERSION
 ENV TZ Etc/UTC
 
 LABEL version=$VERSION
 
 RUN set -eu \
- && apt update \
+ && apt-get update \
  && echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections \
- && apt install -y --no-install-recommends \
+ && apt-get install -y --no-install-recommends \
       python3 curl python3-pip git python3-multidict \
       python3-jinja2 gpg gpg-agent tzdata \
  && pip3 install socrate \
  && echo date.timezone=UTC > /usr/local/etc/php/conf.d/timezone.ini \
  && echo "ServerSignature Off\nServerName roundcube" >> /etc/apache2/apache2.conf \
- && sed -i 's,CustomLog.*combined$,\0 "'"expr=!(%{HTTP_USER_AGENT}=='health'\&\&(-R '127.0.0.1/8' || -R '::1'))"'",' /etc/apache2/sites-available/000-default.conf \
+ && sed -i '/CustomLog.*combined$/d' /etc/apache2/sites-available/000-default.conf \
 \
  && mark="$(apt-mark showmanual)" \
- && apt install -y --no-install-recommends \
+ && apt-get install -y --no-install-recommends \
       libfreetype6-dev libicu-dev libjpeg62-turbo-dev libldap2-dev libmagickwand-dev \
       libpng-dev libpq-dev libsqlite3-dev libzip-dev libpspell-dev libonig-dev \
  && ln -s php.ini-production /usr/local/etc/php/php.ini \
@@ -39,8 +32,8 @@ RUN set -eu \
  && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
  && rm -rf /var/lib/apt/lists
 
-ENV ROUNDCUBE_URL https://github.com/roundcube/roundcubemail/releases/download/1.5.2/roundcubemail-1.5.2-complete.tar.gz
-ENV CARDDAV_URL https://github.com/mstilkerich/rcmcarddav/releases/download/v4.3.0/carddav-v4.3.0.tar.gz
+ENV ROUNDCUBE_URL https://github.com/roundcube/roundcubemail/releases/download/1.5.3/roundcubemail-1.5.3-complete.tar.gz
+ENV CARDDAV_URL https://github.com/mstilkerich/rcmcarddav/releases/download/v4.4.2/carddav-v4.4.2.tar.gz
 
 RUN set -eu \
  && rm -rf /var/www/html/ \
